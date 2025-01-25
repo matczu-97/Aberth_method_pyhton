@@ -109,8 +109,8 @@ def printRoots(roots):
 
 def main():
     global p, polynomLen, derivativeLen
-    max_tries = 850
-    epsilon = 1e-5
+    max_tries = 800
+    epsilon = 1e-4
     p = extractCoefficients("poly_coeff_alberth.txt")
     polynomLen = len(p)
     derivativeLen = polynomLen -1
