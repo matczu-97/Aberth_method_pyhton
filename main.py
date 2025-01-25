@@ -5,7 +5,10 @@ from time import time
 p = []
 polynomLen = 0
 derivativeLen = 0
-
+# Global mask initialization
+mask = None
+# Offsets array of complex zeros
+initialized_zeros = None
 # calculate p'
 def derivative():
     global polynomLen
@@ -47,19 +50,29 @@ def initRoots(p):
         roots[i] = root
     return roots
 
+# Initialize mask once to use at each iteration
+def initGlobalMask(n):
+   global mask
+   mask = np.ones(n, dtype=bool)
 
-# /sigma (1 / z_k - z_j ), j != k
+
 def calculateSigma(roots, k):
-   indexes = np.arange(len(roots)) != k  # Create boolean mask
+   global mask
+   mask[k] = False
    z_k = roots[k]
-   z_j = roots[indexes]  # Use mask to get all roots except k
+   z_j = roots[mask]
+   mask[k] = True
    return np.sum(1 / (z_k - z_j))
 
+# Initializing the zero complex for Offsets calculation W
+def initStartingOffsets(n):
+    global initialized_zeros
+    initialized_zeros = np.zeros(n, dtype=complex)  # Set dtype to complex
 
 # Calculate W equation from Aberth–Ehrlich and keeping the maximum
 def calcOffset(p, p_tag, roots):
     Wmax = float('-inf')
-    W = np.zeros(derivativeLen, dtype=complex)  # Set dtype to complex
+    W = initialized_zeros
     for k, root in enumerate(roots):
         numerator = divide(p, p_tag, root)
         sigma = calculateSigma(roots, k)
@@ -114,6 +127,8 @@ def main():
     p = extractCoefficients("poly_coeff_alberth.txt")
     polynomLen = len(p)
     derivativeLen = polynomLen -1
+    initGlobalMask(derivativeLen)
+    initStartingOffsets(derivativeLen)
     p_tag = derivative()
     start_time = time()
     roots = aberthEhrlich(p_tag, epsilon, max_tries)
