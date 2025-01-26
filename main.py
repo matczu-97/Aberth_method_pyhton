@@ -2,32 +2,28 @@ import numpy as np
 from datetime import datetime
 from time import time
 
-p = []
-polynomLen = 0
-derivativeLen = 0
 # Global mask initialization
 mask = None
-# Offsets array of complex zeros
-initialized_zeros = None
+
 # calculate p'
-def derivative():
-    global polynomLen
-    return p[:-1] * np.arange(polynomLen - 1, 0, -1)
+def derivative(p):
+    return p[:-1] * np.arange(len(p) - 1, 0, -1)
 
 # calculate f(x)
-def polyVal(f, x ,len):
-    d = np.ones(len) * x
+def polyVal(f, x ):
+    d = np.ones(len(f)) * x
     d[0] = 1
     d = np.multiply.accumulate(d)
+    d = d[::-1]
     return np.dot(d, f)
 
 # calculate p(x) / q(x) both polynomials
 def divide(p, q, x):
     if np.abs(x) <= 1:
-        return (polyVal(p, x, polynomLen) / polyVal(q, x, derivativeLen))
+        return (polyVal(p, x) / polyVal(q, x))
     else:
         # Avoiding overflow case
-        return x * (polyVal(p[::-1], 1 / x, polynomLen) / polyVal(q[::-1], 1 / x, derivativeLen))
+        return x * (polyVal(p[::-1], 1 / x) / polyVal(q[::-1], 1 / x))
 
 
 # F = R*cos(theta) + i * R * sin(theha) Euler equation
@@ -38,14 +34,13 @@ def eulerEquation(R, theta):
 
 # Initialize roots
 def initRoots(p):
-    global derivativeLen
     # number of roots is the number of coefficient of the derivative
-    num_of_roots = derivativeLen
+    num_of_roots = len(p) -1
     # function to create Radius of the imaginary
-    R = 1 + max(np.abs(p[1:])) / (np.abs(p[0]))
-    roots = np.zeros(num_of_roots, dtype=complex)
+    R = (1 + max(np.abs(p[1:])) / (np.abs(p[0]))) / 2
+    roots = np.zeros(num_of_roots, dtype=np.complex128)
     for i in range(num_of_roots):
-        theta = (2 * np.pi * i) / polynomLen
+        theta = (2 * np.pi * i) / (num_of_roots)
         root = eulerEquation(R, theta)
         roots[i] = root
     return roots
@@ -64,17 +59,10 @@ def calculateSigma(roots, k):
    mask[k] = True
    return np.sum(1 / (z_k - z_j))
 
-
-# Initializing the zero complex for Offsets calculation W
-def initStartingOffsets(n):
-    global initialized_zeros
-    initialized_zeros = np.zeros(n, dtype=complex)  # Set dtype to complex
-
-
 # Calculate W equation from Aberth–Ehrlich and keeping the maximum
 def calcOffset(p, p_tag, roots):
     Wmax = float('-inf')
-    W = initialized_zeros
+    W = np.zeros(len(roots), dtype=np.complex128)
     for k, root in enumerate(roots):
         numerator = divide(p, p_tag, root)
         sigma = calculateSigma(roots, k)
@@ -85,8 +73,7 @@ def calcOffset(p, p_tag, roots):
 
 
 # Aberth–Ehrlich  function to find roots.
-def aberthEhrlich(p_tag, epsilon, max_tries):
-    global p
+def aberthEhrlich(p,p_tag, epsilon, max_tries):
     tries = 0
     roots = initRoots(p)
     while tries < max_tries:
@@ -122,26 +109,22 @@ def polynomial(coeffs, x):
 
 
 def main():
-    global p, polynomLen, derivativeLen
-    max_tries = 200
-    epsilon = 1e-3
+    max_tries = 600
+    epsilon = 1e-6
     p = extractCoefficients("poly_coeff_alberth.txt")
-    polynomLen = len(p)
-    derivativeLen = polynomLen -1
-    initGlobalMask(derivativeLen)
-    initStartingOffsets(derivativeLen)
-    p_tag = derivative()
+    initGlobalMask(len(p) - 1)
+    p_tag = derivative(p)
     start_time = time()
-    aberth_roots = aberthEhrlich(p_tag, epsilon, max_tries)
+    aberth_roots = aberthEhrlich(p,p_tag, epsilon, max_tries)
     end_time = time()
     abert_time = end_time - start_time
     print("The operation took:", abert_time, "sec")
 
-    aberth_roots = np.sort(aberth_roots)
+    aberth_roots = np.sort_complex(aberth_roots)
     # Example usage
-    roots = find_roots(p)
-    roots = np.sort(roots)
-    print(roots, aberth_roots)  # [3. 2.]
+    roots_  = find_roots(p)
+    roots_ = np.sort_complex(roots_)
+    print(np.c_[aberth_roots.reshape(-1,1),roots_.reshape(-1,1)])
 
 if __name__ == "__main__":
     main()
