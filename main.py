@@ -64,10 +64,12 @@ def calculateSigma(roots, k):
    mask[k] = True
    return np.sum(1 / (z_k - z_j))
 
+
 # Initializing the zero complex for Offsets calculation W
 def initStartingOffsets(n):
     global initialized_zeros
     initialized_zeros = np.zeros(n, dtype=complex)  # Set dtype to complex
+
 
 # Calculate W equation from Aberth–Ehrlich and keeping the maximum
 def calcOffset(p, p_tag, roots):
@@ -92,7 +94,7 @@ def aberthEhrlich(p_tag, epsilon, max_tries):
         # the alg stops when each offset is smaller than the defined epsilon
         if Wmax < epsilon:
             tries = max_tries
-        # Updating roots with the offset -> SLIDE 6
+        # Updating roots
         roots -= w
         tries += 1
     return roots
@@ -104,26 +106,25 @@ def extractCoefficients(file_name):
         return np.array([float(line.strip()) for line in file], dtype=np.float64)
 
 
-# printing the roots.
-def printRoots(roots):
-    formatted_roots = []
-    for root in roots:
-        if np.iscomplex(root):
-            real_part = root.real
-            imag_part = root.imag
-            formatted_real = f"{real_part:.3f}"
-            formatted_imag = f"{abs(imag_part):.3f}i"
-            sign = "-" if imag_part < 0 else "+"
-            formatted_roots.append(formatted_real + sign + formatted_imag)
-        else:
-            formatted_roots.append(f"{root:.3f}")
-    print(formatted_roots)
+def find_roots(coefficients):
+    """
+    Find roots of polynomial using NumPy.
+    Args:
+        coefficients: List of coefficients in descending order of degree
+    Returns:
+        Array of roots
+    """
+    return np.roots(coefficients)
+
+def polynomial(coeffs, x):
+   """Evaluate polynomial at x given coefficients in descending order"""
+   return np.polyval(coeffs, x)
 
 
 def main():
     global p, polynomLen, derivativeLen
-    max_tries = 800
-    epsilon = 1e-4
+    max_tries = 200
+    epsilon = 1e-3
     p = extractCoefficients("poly_coeff_alberth.txt")
     polynomLen = len(p)
     derivativeLen = polynomLen -1
@@ -131,12 +132,16 @@ def main():
     initStartingOffsets(derivativeLen)
     p_tag = derivative()
     start_time = time()
-    roots = aberthEhrlich(p_tag, epsilon, max_tries)
+    aberth_roots = aberthEhrlich(p_tag, epsilon, max_tries)
     end_time = time()
     abert_time = end_time - start_time
-    printRoots(roots)
     print("The operation took:", abert_time, "sec")
 
+    aberth_roots = np.sort(aberth_roots)
+    # Example usage
+    roots = find_roots(p)
+    roots = np.sort(roots)
+    print(roots, aberth_roots)  # [3. 2.]
 
 if __name__ == "__main__":
     main()
